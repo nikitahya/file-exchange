@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Dashboard | File-Exchange</title>
+</head>
+<body>
+    <h1>File-Exchange Dashboard</h1>
+
+    <p><strong>Free disk space:</strong> {{ free_space_gb }} GB</p>
+
+    <form action="{{ url_for('main.clear_showcase') }}" method="post">
+        <button type="submit">Clear showcase</button>
+    </form>
+
+
+    <form action="{{ url_for('main.start_request_mode') }}" method="post" style="display:inline;">
+        <button type="submit">Send request</button>
+    </form>
+    <hr>
+
+    <form action="{{ url_for('main.create_post') }}" method="post" enctype="multipart/form-data">
+        <textarea name="body_text" rows="4" cols="50" placeholder="Write something..."></textarea>
+        
+
+        <input type="file" name="file">
+        
+
+        <button type="submit">Create post</button>
+    </form>
+
+    <hr>
+
+    <h2>Posts</h2>
+
+    {% for post in posts %}
+        <div style="border:1px solid #ccc; padding:10px; margin-bottom:10px;">
+            <p><strong>ID:</strong> {{ post.id }}</p>         
+            <p>
+                <strong>
+                    {% if post.direction == "incoming" %}
+                        📥 Incoming
+                    {% else %}
+                        📤 Outgoing
+                    {% endif %}
+                </strong>
+                —
+                {{ post.kind }}
+            </p>
+
+            {% if post.body_text %}
+                <p>{{ post.body_text }}</p>
+            {% endif %}
+
+            {% for file in post.attachments %}
+                <p>
+                    📎 {{ file.original_name }}
+                    —
+                    <a href="{{ url_for('main.download_file', attachment_id=file.id) }}">Download</a>
+                </p>
+            {% endfor %}
+
+            <form action="{{ url_for('main.publish_post', post_id=post.id) }}" method="post" style="display:inline;">
+                <button type="submit">Show on showcase</button>
+            </form>
+
+            <form action="{{ url_for('main.delete_post', post_id=post.id) }}" method="post" style="display:inline;">
+                <button type="submit">Delete</button>
+            </form>
+
+            
+
+            <small>{{ post.created_at }}</small>
+        </div>
+    {% endfor %}
+
+    <hr>
+
+    <form action="{{ url_for('auth.logout') }}" method="post">
+        <button type="submit">Log out</button>
+    </form>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Showcase | File-Exchange</title>
+</head>
+<body>
+    <h1>File Showcase</h1>
+
+    {% if post.body_text %}
+        <div>
+            <h3>Text</h3>
+            <pre id="text-block">{{ post.body_text }}</pre>
+            <button onclick="copyText()">Copy</button>
+        </div>
+
+        <script>
+            function copyText() {
+                const text = document.getElementById("text-block").innerText;
+                navigator.clipboard.writeText(text);
+                alert("Copied!");
+            }
+        </script>
+    {% endif %}
+
+    {% if post.attachments %}
+        <div>
+            <h3>Files</h3>
+            {% for file in post.attachments %}
+                <div>
+                    📎 {{ file.original_name }}
+                    —
+                    <a href="{{ url_for('showcase.showcase_download_file', attachment_id=file.id, token=request.view_args['token']) }}">
+                        Download
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</body>
+</html>
