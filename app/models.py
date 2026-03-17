@@ -48,10 +48,6 @@ class ShowcaseState(db.Model):
 
     mode = db.Column(db.String(20), nullable=False, default="empty")
     active_post_id = db.Column(db.Integer, db.ForeignKey("posts.id"), nullable=True)
+    token = db.Column(db.String(255), nullable=False, unique=True)
 
-    updated_at = db.Column(
-        db.DateTime,
-        nullable=False,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow
-    )
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)

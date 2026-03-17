@@ -1,41 +1,70 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>Showcase | File-Exchange</title>
-</head>
-<body>
-    <h1>File Showcase</h1>
+{% extends "base.html" %}
 
+{% block title %}Showcase | File-Exchange{% endblock %}
+
+{% block content %}
+<div class="topbar">
+    <div>
+        <h1>Showcase</h1>
+        <p>Shared content available by private link.</p>
+    </div>
+</div>
+
+<div class="card">
     {% if post.body_text %}
-        <div>
+        <div class="copy-block">
             <h3>Text</h3>
-            <pre id="text-block">{{ post.body_text }}</pre>
-            <button onclick="copyText()">Copy</button>
-        </div>
 
-        <script>
-            function copyText() {
-                const text = document.getElementById("text-block").innerText;
-                navigator.clipboard.writeText(text);
-                alert("Copied!");
-            }
-        </script>
+            <div class="copy-wrapper">
+                <button type="button" class="copy-inside-btn" id="copy-btn" onclick="copyText()">Copy</button>
+                <pre id="text-block">{{ post.body_text }}</pre>
+            </div>
+        </div>
     {% endif %}
 
     {% if post.attachments %}
         <div>
             <h3>Files</h3>
-            {% for file in post.attachments %}
-                <div>
-                    📎 {{ file.original_name }}
-                    —
-                    <a href="{{ url_for('showcase.showcase_download_file', attachment_id=file.id, token=request.view_args['token']) }}">
-                        Download
-                    </a>
-                </div>
-            {% endfor %}
+            <ul class="file-list">
+                {% for file in post.attachments %}
+                    <li>
+                        📎 {{ file.original_name }}
+                        —
+                        <a href="{{ url_for('showcase.showcase_download_file', attachment_id=file.id, token=token) }}">
+                            Download
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
         </div>
     {% endif %}
-</body>
-</html>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function copyText() {
+        const text = document.getElementById("text-block");
+        const button = document.getElementById("copy-btn");
+
+        if (!text || !button) return;
+
+        try {
+            await navigator.clipboard.writeText(text.innerText);
+            const originalText = button.innerText;
+            button.innerText = "Copied";
+            button.classList.add("copied");
+
+            setTimeout(() => {
+                button.innerText = originalText;
+                button.classList.remove("copied");
+            }, 1400);
+        } catch (err) {
+            button.innerText = "Failed";
+            setTimeout(() => {
+                button.innerText = "Copy";
+            }, 1400);
+        }
+    }
+</script>
+{% endblock %}

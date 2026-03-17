@@ -1,83 +1,174 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>Dashboard | File-Exchange</title>
-</head>
-<body>
-    <h1>File-Exchange Dashboard</h1>
+{% extends "base.html" %}
 
-    <p><strong>Free disk space:</strong> {{ free_space_gb }} GB</p>
+{% block title %}Dashboard | File-Exchange{% endblock %}
 
-    <form action="{{ url_for('main.clear_showcase') }}" method="post">
-        <button type="submit">Clear showcase</button>
-    </form>
+{% block content %}
+<div class="topbar">
+    <div>
+        <h1>File-Exchange</h1>
+        <p>
+            Private dashboard for sharing files, notes and quick requests.
+        </p>
+    </div>
 
+    <div class="topbar-actions">
+        <span class="badge small-badge">Free space: {{ free_space_gb }} GB</span>
 
-    <form action="{{ url_for('main.start_request_mode') }}" method="post" style="display:inline;">
-        <button type="submit">Send request</button>
-    </form>
-    <hr>
+        <form action="{{ url_for('auth.logout') }}" method="post">
+            <button type="submit" class="danger compact-btn">Log out</button>
+        </form>
+    </div>
+</div>
 
-    <form action="{{ url_for('main.create_post') }}" method="post" enctype="multipart/form-data">
-        <textarea name="body_text" rows="4" cols="50" placeholder="Write something..."></textarea>
-        
+<div class="card control-panel">
+    <div class="control-grid">
+        <div class="control-left">
+            <p class="control-label">Current link</p>
 
-        <input type="file" name="file">
-        
-
-        <button type="submit">Create post</button>
-    </form>
-
-    <hr>
-
-    <h2>Posts</h2>
-
-    {% for post in posts %}
-        <div style="border:1px solid #ccc; padding:10px; margin-bottom:10px;">
-            <p><strong>ID:</strong> {{ post.id }}</p>         
-            <p>
-                <strong>
-                    {% if post.direction == "incoming" %}
-                        📥 Incoming
-                    {% else %}
-                        📤 Outgoing
-                    {% endif %}
-                </strong>
-                —
-                {{ post.kind }}
-            </p>
-
-            {% if post.body_text %}
-                <p>{{ post.body_text }}</p>
+            {% if showcase_url %}
+                <a href="{{ showcase_url }}" target="_blank" class="showcase-link">{{ showcase_url }}</a>
+            {% else %}
+                <p class="muted">No active link</p>
             {% endif %}
 
-            {% for file in post.attachments %}
-                <p>
-                    📎 {{ file.original_name }}
-                    —
-                    <a href="{{ url_for('main.download_file', attachment_id=file.id) }}">Download</a>
-                </p>
-            {% endfor %}
+            <div class="actions top-actions">
+                <button type="button" id="refresh-token-btn" class="secondary compact-btn">
+                    Regenerate showcase link
+                </button>
+            </div>
+        </div>
 
-            <form action="{{ url_for('main.publish_post', post_id=post.id) }}" method="post" style="display:inline;">
-                <button type="submit">Show on showcase</button>
+        <div class="control-right">
+            <form action="{{ url_for('main.start_request_mode') }}" method="post">
+                <button type="submit" class="secondary compact-btn">Send request</button>
             </form>
 
-            <form action="{{ url_for('main.delete_post', post_id=post.id) }}" method="post" style="display:inline;">
-                <button type="submit">Delete</button>
+            <form action="{{ url_for('main.clear_showcase') }}" method="post">
+                <button type="submit" class="secondary compact-btn">Clear showcase</button>
             </form>
+        </div>
+    </div>
+</div>
 
-            
+<div class="card">
+    <h2>Create post</h2>
 
-            <small>{{ post.created_at }}</small>
+    <form action="{{ url_for('main.create_post') }}" method="post" enctype="multipart/form-data" class="stack">
+        <textarea name="body_text" placeholder="Write a note, message or anything you want to place on the showcase..."></textarea>
+
+        <div class="post-form-actions">
+            <label class="custom-file-upload compact-upload">
+                <input type="file" name="files" id="post-files-input" multiple>
+                Add file
+            </label>
+
+            <button type="submit" class="compact-btn">Create post</button>
+        </div>
+
+        <div id="selected-files" class="selected-files muted"></div>
+    </form>
+</div>
+
+{% if posts %}
+    {% for post in posts %}
+        <div class="card">
+            <div class="meta">
+                <span class="badge {% if post.direction == 'incoming' %}incoming{% else %}outgoing{% endif %}">
+                    {% if post.direction == "incoming" %}
+                        Incoming
+                    {% else %}
+                        Outgoing
+                    {% endif %}
+                </span>
+                <span class="badge">{{ post.kind }}</span>
+                <span class="muted">ID {{ post.id }}</span>
+            </div>
+
+            {% if post.body_text %}
+                <pre>{{ post.body_text }}</pre>
+            {% endif %}
+
+            {% if post.attachments %}
+                <ul class="file-list">
+                    {% for file in post.attachments %}
+                        <li>
+                            📎 {{ file.original_name }}
+                            —
+                            <a href="{{ url_for('main.download_file', attachment_id=file.id) }}">Download</a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+
+            <div class="actions post-actions">
+                <form action="{{ url_for('main.publish_post', post_id=post.id) }}" method="post">
+                    <button type="submit" class="compact-btn small-action-btn">Show on showcase</button>
+                </form>
+
+                <form action="{{ url_for('main.delete_post', post_id=post.id) }}" method="post">
+                    <button type="submit" class="danger compact-btn small-action-btn">Delete</button>
+                </form>
+            </div>
+
+            <div class="copy-note">
+                {{ post.created_at|datetime }}
+            </div>
         </div>
     {% endfor %}
+{% else %}
+    <div class="card empty-state">
+        <h2>No posts yet</h2>
+        <p>Create your first post to start using File-Exchange.</p>
+    </div>
+{% endif %}
+{% endblock %}
 
-    <hr>
+{% block scripts %}
+<script>
+    const refreshBtn = document.getElementById("refresh-token-btn");
 
-    <form action="{{ url_for('auth.logout') }}" method="post">
-        <button type="submit">Log out</button>
-    </form>
-</body>
-</html>
+    if (refreshBtn) {
+        refreshBtn.addEventListener("click", async () => {
+            const response = await fetch("{{ url_for('main.refresh_showcase_token') }}", {
+                method: "POST",
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            });
+
+            if (!response.ok) {
+                alert("Could not regenerate token");
+                return;
+            }
+
+            const data = await response.json();
+
+            try {
+                await navigator.clipboard.writeText(data.showcase_url);
+            } catch (err) {
+                alert("New link: " + data.showcase_url);
+            }
+
+            window.location.reload();
+        });
+    }
+
+    const postFilesInput = document.getElementById("post-files-input");
+    const selectedFiles = document.getElementById("selected-files");
+
+    if (postFilesInput && selectedFiles) {
+        postFilesInput.addEventListener("change", () => {
+            const files = Array.from(postFilesInput.files || []);
+
+            if (!files.length) {
+                selectedFiles.innerHTML = "";
+                return;
+            }
+
+            selectedFiles.innerHTML = files
+                .map(file => `<div>📎 ${file.name}</div>`)
+                .join("");
+        });
+    }
+</script>
+{% endblock %}

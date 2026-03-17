@@ -1,38 +1,40 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>Login | File-Exchange</title>
-</head>
-<body>
-    <h1>File-Exchange Login</h1>
+{% extends "base.html" %}
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <ul>
-          {% for category, message in messages %}
-            <li><strong>{{ category }}:</strong> {{ message }}</li>
-          {% endfor %}
-        </ul>
-      {% endif %}
-    {% endwith %}
+{% block title %}Login | File-Exchange{% endblock %}
 
-    <form method="post">
-        <div>
-            <label>Username</label>
+{% block content %}
+<div class="login-wrap">
+    <div class="card">
+        <h1>File-Exchange</h1>
+        <p class="muted">
+            Private file and text exchange space.
+        </p>
 
-            <input type="text" name="username" required>
-        </div>
-        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <ul class="flash-list">
+              {% for category, message in messages %}
+                <li><strong>{{ category }}:</strong> {{ message }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        {% endwith %}
 
-        <div>
-            <label>Password</label>
+        <form method="post" class="stack">
+            <div>
+                <label>Username</label>
+                <input type="text" name="username" required>
+            </div>
 
-            <input type="password" name="password" required>
-        </div>
-        
+            <div>
+                <label>Password</label>
+                <input type="password" name="password" required>
+            </div>
 
-        <button type="submit">Log in</button>
-    </form>
-</body>
-</html>
+            <div>
+                <button type="submit">Log in</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

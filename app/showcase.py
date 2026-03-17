@@ -1,23 +1,22 @@
-from flask import Blueprint, render_template, abort, current_app, request, send_file
+from flask import Blueprint, render_template, abort, current_app, request, send_file, redirect, url_for
 import os
 
 from app.extensions import db
 from app.models import ShowcaseState, Post, Attachment
-from app.storage import save_file
+from app.storage import save_files
+
 
 showcase_bp = Blueprint("showcase", __name__)
 
+
 @showcase_bp.route("/showcase/<token>")
 def showcase(token):
-    expected_token = current_app.config["SHOWCASE_TOKEN"]
-
-    if token != expected_token:
-        abort(404)
-
     state = ShowcaseState.query.first()
 
+    if not state or token != state.token:
+        abort(404)
 
-    if not state or state.mode == "empty":
+    if state.mode == "empty":
         return render_template("showcase_empty.html")
 
     if state.mode == "request":
@@ -26,25 +25,24 @@ def showcase(token):
     if state.mode == "post" and state.active_post_id:
         post = Post.query.get(state.active_post_id)
         if not post:
-            return {"status": "empty"}
+            return render_template("showcase_empty.html")
         return render_template("showcase.html", post=post, token=token)
 
-    return {"status": "empty"}
+    return render_template("showcase_empty.html")
+
 
 @showcase_bp.route("/showcase/<token>/reply", methods=["POST"])
 def showcase_reply(token):
-    expected_token = current_app.config["SHOWCASE_TOKEN"]
-
-    if token != expected_token:
-        abort(404)
-
     state = ShowcaseState.query.first()
 
-    if not state or state.mode != "request":
+    if not state or token != state.token:
+        abort(404)
+
+    if state.mode != "request":
         return {"error": "request mode is not active"}, 400
 
     body_text = request.form.get("body_text", "").strip()
-    file = request.files.get("file")
+    files = request.files.getlist("files")
 
     incoming_post = Post(
         body_text=body_text if body_text else None,
@@ -55,32 +53,38 @@ def showcase_reply(token):
     db.session.add(incoming_post)
     db.session.flush()
 
-    if file and file.filename:
-        file_data = save_file(file)
+    valid_files = [file for file in files if file and file.filename]
 
-        attachment = Attachment(
-            post_id=incoming_post.id,
-            original_name=file_data["original_name"],
-            stored_name=file_data["stored_name"],
-            relative_path=file_data["relative_path"],
-            size_bytes=file_data["size_bytes"],
-            mime_type=file_data["mime_type"],
-        )
+    if valid_files:
+        try:
+            files_data = save_files(valid_files)
+        except ValueError as e:
+            return str(e), 400
 
-        db.session.add(attachment)
+        for file_data in files_data:
+            attachment = Attachment(
+                post_id=incoming_post.id,
+                original_name=file_data["original_name"],
+                stored_name=file_data["stored_name"],
+                relative_path=file_data["relative_path"],
+                size_bytes=file_data["size_bytes"],
+                mime_type=file_data["mime_type"],
+            )
+            db.session.add(attachment)
 
     state.mode = "empty"
     state.active_post_id = None
 
     db.session.commit()
 
-    return render_template("showcase_reply_done.html")
+    return redirect(url_for("showcase.showcase", token=token))
+
 
 @showcase_bp.route("/showcase/files/<int:attachment_id>/download/<token>")
 def showcase_download_file(attachment_id, token):
-    expected_token = current_app.config["SHOWCASE_TOKEN"]
+    state = ShowcaseState.query.first()
 
-    if token != expected_token:
+    if not state or token != state.token:
         abort(404)
 
     attachment = Attachment.query.get_or_404(attachment_id)

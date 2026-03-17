@@ -1,11 +1,18 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>Showcase</title>
-</head>
-<body>
-    <h1>Nothing here yet</h1>
+
+{% extends "base.html" %}
+
+{% block title %}Showcase | File-Exchange{% endblock %}
+
+{% block content %}
+<div class="topbar">
+    <div>
+        <h1>Showcase</h1>
+        <p>Shared content available by private link.</p>
+    </div>
+</div>
+
+<div class="card empty-state">
+    <h2>Nothing here yet</h2>
     <p>The showcase is currently empty.</p>
-</body>
-</html>
+</div>
+{% endblock %}

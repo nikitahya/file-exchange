@@ -1,23 +1,51 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>Showcase Request | File-Exchange</title>
-</head>
-<body>
-    <h1>File Showcase</h1>
+{% extends "base.html" %}
 
-    <p>Please send your response below.</p>
+{% block title %}Request | File-Exchange{% endblock %}
 
-    <form action="{{ url_for('showcase.showcase_reply', token=token) }}" method="post" 
-enctype="multipart/form-data">
-        <textarea name="body_text" rows="5" cols="60" placeholder="Write your message..."></textarea>
-        
+{% block content %}
+<div class="topbar">
+    <div>
+        <h1>Response requested</h1>
+        <p>Please send your text or files below.</p>
+    </div>
+</div>
 
-        <input type="file" name="file">
-        
+<div class="card">
+    <form action="{{ url_for('showcase.showcase_reply', token=token) }}" method="post" enctype="multipart/form-data" class="stack">
+        <textarea name="body_text" rows="5" placeholder="Write your response..."></textarea>
 
-        <button type="submit">Send response</button>
+        <div class="post-form-actions">
+            <label class="custom-file-upload compact-upload">
+                <input type="file" name="files" id="reply-files-input" multiple>
+                Add file
+            </label>
+
+            <button type="submit" class="compact-btn">Send response</button>
+        </div>
+
+        <div id="reply-selected-files" class="selected-files muted"></div>
     </form>
-</body>
-</html>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const replyFilesInput = document.getElementById("reply-files-input");
+    const replySelectedFiles = document.getElementById("reply-selected-files");
+
+    if (replyFilesInput && replySelectedFiles) {
+        replyFilesInput.addEventListener("change", () => {
+            const files = Array.from(replyFilesInput.files || []);
+
+            if (!files.length) {
+                replySelectedFiles.innerHTML = "";
+                return;
+            }
+
+            replySelectedFiles.innerHTML = files
+                .map(file => `<div>📎 ${file.name}</div>`)
+                .join("");
+        });
+    }
+</script>
+{% endblock %}

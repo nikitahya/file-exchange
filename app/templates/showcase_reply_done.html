@@ -1,11 +1,17 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>Response sent | File-Exchange</title>
-</head>
-<body>
-    <h1>Response sent</h1>
-    <p>Your response has been delivered.</p>
-</body>
-</html>
+
+{% extends "base.html" %}
+
+{% block title %}Response sent | File-Exchange{% endblock %}
+
+{% block content %}
+<div class="topbar">
+    <div>
+        <h1>Response sent</h1>
+        <p>Your response has been delivered successfully.</p>
+    </div>
+</div>
+
+<div class="card empty-state">
+    <p>You can close this page now.</p>
+</div>
+{% endblock %}

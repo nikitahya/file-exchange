@@ -1,27 +1,40 @@
-
-from flask import Blueprint, render_template, request, redirect, url_for, send_file
+from flask import Blueprint, render_template, request, redirect, url_for, send_file, current_app, jsonify
 from flask_login import login_required
 import os
 
 from app.extensions import db
 from app.models import Post, Attachment, ShowcaseState
-from app.storage import save_file, delete_file
-from app.utils import get_free_space_gb
+from app.storage import save_files, delete_file
+from app.utils import get_free_space_gb, generate_showcase_token
+
 
 main_bp = Blueprint("main", __name__)
+
 
 @main_bp.route("/")
 @login_required
 def dashboard():
     posts = Post.query.order_by(Post.created_at.desc()).all()
     free_space_gb = get_free_space_gb(".")
-    return render_template("dashboard.html", posts=posts, free_space_gb=free_space_gb)
+    state = ShowcaseState.query.first()
+    showcase_url = None
+
+    if state:
+        showcase_url = url_for("showcase.showcase", token=state.token, _external=True)
+
+    return render_template(
+        "dashboard.html",
+        posts=posts,
+        free_space_gb=free_space_gb,
+        showcase_url=showcase_url,
+    )
+
 
 @main_bp.route("/posts/create", methods=["POST"])
 @login_required
 def create_post():
     body_text = request.form.get("body_text", "").strip()
-    file = request.files.get("file")
+    files = request.files.getlist("files")
 
     post = Post(
         body_text=body_text if body_text else None,
@@ -30,25 +43,31 @@ def create_post():
     )
 
     db.session.add(post)
-    db.session.flush()  # чтобы получить post.id
+    db.session.flush()
 
-    if file and file.filename:
-        file_data = save_file(file)
+    valid_files = [file for file in files if file and file.filename]
 
-        attachment = Attachment(
-            post_id=post.id,
-            original_name=file_data["original_name"],
-            stored_name=file_data["stored_name"],
-            relative_path=file_data["relative_path"],
-            size_bytes=file_data["size_bytes"],
-            mime_type=file_data["mime_type"],
-        )
+    if valid_files:
+        try:
+            files_data = save_files(valid_files)
+        except ValueError as e:
+            return str(e), 400
 
-        db.session.add(attachment)
+        for file_data in files_data:
+            attachment = Attachment(
+                post_id=post.id,
+                original_name=file_data["original_name"],
+                stored_name=file_data["stored_name"],
+                relative_path=file_data["relative_path"],
+                size_bytes=file_data["size_bytes"],
+                mime_type=file_data["mime_type"],
+            )
+            db.session.add(attachment)
 
     db.session.commit()
 
     return redirect(url_for("main.dashboard"))
+
 
 @main_bp.route("/posts/<int:post_id>/publish", methods=["POST"])
 @login_required
@@ -58,7 +77,7 @@ def publish_post(post_id):
     state = ShowcaseState.query.first()
 
     if not state:
-        state = ShowcaseState(id=1)
+        state = ShowcaseState(id=1, token=generate_showcase_token())
         db.session.add(state)
 
     state.mode = "post"
@@ -69,6 +88,21 @@ def publish_post(post_id):
     return redirect(url_for("main.dashboard"))
 
 
+@main_bp.route("/showcase/request/start", methods=["POST"])
+@login_required
+def start_request_mode():
+    state = ShowcaseState.query.first()
+
+    if not state:
+        state = ShowcaseState(id=1, token=generate_showcase_token())
+        db.session.add(state)
+
+    state.mode = "request"
+    state.active_post_id = None
+
+    db.session.commit()
+
+    return redirect(url_for("main.dashboard"))
 
 
 @main_bp.route("/showcase/clear", methods=["POST"])
@@ -77,7 +111,7 @@ def clear_showcase():
     state = ShowcaseState.query.first()
 
     if not state:
-        state = ShowcaseState(id=1)
+        state = ShowcaseState(id=1, token=generate_showcase_token())
         db.session.add(state)
 
     state.mode = "empty"
@@ -86,6 +120,32 @@ def clear_showcase():
     db.session.commit()
 
     return redirect(url_for("main.dashboard"))
+
+
+@main_bp.route("/showcase/token/refresh", methods=["POST"])
+@login_required
+def refresh_showcase_token():
+    state = ShowcaseState.query.first()
+
+    if not state:
+        state = ShowcaseState(
+            id=1,
+            mode="empty",
+            active_post_id=None,
+            token=generate_showcase_token(),
+        )
+        db.session.add(state)
+    else:
+        state.token = generate_showcase_token()
+
+    db.session.commit()
+
+    showcase_url = url_for("showcase.showcase", token=state.token, _external=True)
+
+    return jsonify({
+        "token": state.token,
+        "showcase_url": showcase_url,
+    })
 
 
 @main_bp.route("/files/<int:attachment_id>/download")
@@ -105,7 +165,6 @@ def download_file(attachment_id):
         download_name=attachment.original_name
     )
 
-    return send_file(path, as_attachment=True, download_name=attachment.original_name)
 
 @main_bp.route("/posts/<int:post_id>/delete", methods=["POST"])
 @login_required
@@ -121,22 +180,6 @@ def delete_post(post_id):
         delete_file(attachment.relative_path)
 
     db.session.delete(post)
-    db.session.commit()
-
-    return redirect(url_for("main.dashboard"))
-
-@main_bp.route("/showcase/request/start", methods=["POST"])
-@login_required
-def start_request_mode():
-    state = ShowcaseState.query.first()
-
-    if not state:
-        state = ShowcaseState(id=1)
-        db.session.add(state)
-
-    state.mode = "request"
-    state.active_post_id = None
-
     db.session.commit()
 
     return redirect(url_for("main.dashboard"))
