@@ -62,6 +62,7 @@ file-exchange/
 ├── requirements.txt
 └── run.py
 
+```
 ## Local setup
 
 1. Create virtual environment
