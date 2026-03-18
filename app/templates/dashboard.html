@@ -3,15 +3,15 @@
 {% block title %}Dashboard | File-Exchange{% endblock %}
 
 {% block content %}
-<div class="topbar">
-    <div>
+<div class="topbar dashboard-topbar">
+    <div class="topbar-left">
         <h1>File-Exchange</h1>
         <p>
             Private dashboard for sharing files, notes and quick requests.
         </p>
     </div>
 
-    <div class="topbar-actions">
+    <div class="topbar-right-fixed">
         <span class="badge small-badge">Free space: {{ free_space_gb }} GB</span>
 
         <form action="{{ url_for('auth.logout') }}" method="post">
@@ -21,32 +21,42 @@
 </div>
 
 <div class="card control-panel">
-    <div class="control-grid">
-        <div class="control-left">
-            <p class="control-label">Current link</p>
+    <p class="control-label">Current link</p>
 
-            {% if showcase_url %}
-                <a href="{{ showcase_url }}" target="_blank" class="showcase-link">{{ showcase_url }}</a>
-            {% else %}
-                <p class="muted">No active link</p>
-            {% endif %}
+    <div class="link-row">
+        {% if showcase_url %}
+            <a
+                href="#"
+                id="showcase-link-copy"
+                class="showcase-link"
+                data-link="{{ showcase_url }}"
+                title="Copy link"
+            >
+                {{ showcase_url }}
+            </a>
+        {% else %}
+            <p class="muted">No active link</p>
+        {% endif %}
 
-            <div class="actions top-actions">
-                <button type="button" id="refresh-token-btn" class="secondary compact-btn">
-                    Regenerate showcase link
-                </button>
-            </div>
-        </div>
+        <button
+            type="button"
+            id="refresh-token-btn"
+            class="icon-btn"
+            title="Regenerate showcase link"
+            aria-label="Regenerate showcase link"
+        >
+            ↻
+        </button>
+    </div>
 
-        <div class="control-right">
-            <form action="{{ url_for('main.start_request_mode') }}" method="post">
-                <button type="submit" class="secondary compact-btn">Send request</button>
-            </form>
+    <div class="centered-actions">
+        <form action="{{ url_for('main.start_request_mode') }}" method="post">
+            <button type="submit" class="secondary compact-btn">Send request</button>
+        </form>
 
-            <form action="{{ url_for('main.clear_showcase') }}" method="post">
-                <button type="submit" class="secondary compact-btn">Clear showcase</button>
-            </form>
-        </div>
+        <form action="{{ url_for('main.clear_showcase') }}" method="post">
+            <button type="submit" class="secondary compact-btn">Clear showcase</button>
+        </form>
     </div>
 </div>
 
@@ -80,8 +90,7 @@
                         Outgoing
                     {% endif %}
                 </span>
-                <span class="badge">{{ post.kind }}</span>
-                <span class="muted">ID {{ post.id }}</span>
+                <span class="muted">Size: {{ post|post_size }}</span>
             </div>
 
             {% if post.body_text %}
@@ -123,6 +132,7 @@
 {% endif %}
 {% endblock %}
 
+
 {% block scripts %}
 <script>
     const refreshBtn = document.getElementById("refresh-token-btn");
@@ -137,19 +147,41 @@
             });
 
             if (!response.ok) {
-                alert("Could not regenerate token");
                 return;
             }
 
             const data = await response.json();
 
             try {
-                await navigator.clipboard.writeText(data.showcase_url);
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(data.showcase_url);
+                }
             } catch (err) {
-                alert("New link: " + data.showcase_url);
             }
 
             window.location.reload();
+        });
+    }
+
+    const showcaseLinkCopy = document.getElementById("showcase-link-copy");
+    if (showcaseLinkCopy) {
+        showcaseLinkCopy.addEventListener("click", async (e) => {
+            e.preventDefault();
+            const link = showcaseLinkCopy.dataset.link;
+
+            try {
+                await navigator.clipboard.writeText(link);
+                showcaseLinkCopy.classList.add("copied-link");
+                const originalText = showcaseLinkCopy.innerText;
+                showcaseLinkCopy.innerText = "Copied link";
+
+                setTimeout(() => {
+                    showcaseLinkCopy.innerText = originalText;
+                    showcaseLinkCopy.classList.remove("copied-link");
+                }, 1200);
+            } catch (err) {
+                window.open(link, "_blank");
+            }
         });
     }
 

@@ -13,30 +13,28 @@
 <div class="card">
     {% if post.body_text %}
         <div class="copy-block">
-            <h3>Text</h3>
-
-            <div class="copy-wrapper">
-                <button type="button" class="copy-inside-btn" id="copy-btn" onclick="copyText()">Copy</button>
+            <div class="text-panel">
+                <div class="text-panel-header">
+                    <span class="text-panel-label">Text</span>
+                    <button type="button" class="copy-inline-btn" id="copy-btn" onclick="copyText()">Copy</button>
+                </div>
                 <pre id="text-block">{{ post.body_text }}</pre>
             </div>
         </div>
     {% endif %}
 
     {% if post.attachments %}
-        <div>
-            <h3>Files</h3>
-            <ul class="file-list">
-                {% for file in post.attachments %}
-                    <li>
-                        📎 {{ file.original_name }}
-                        —
-                        <a href="{{ url_for('showcase.showcase_download_file', attachment_id=file.id, token=token) }}">
-                            Download
-                        </a>
-                    </li>
-                {% endfor %}
-            </ul>
-        </div>
+        <ul class="file-list showcase-file-list">
+            {% for file in post.attachments %}
+                <li>
+                    📎 {{ file.original_name }}
+                    —
+                    <a href="{{ url_for('showcase.showcase_download_file', attachment_id=file.id, token=token) }}">
+                        Download
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
     {% endif %}
 </div>
 {% endblock %}

@@ -1,9 +1,9 @@
-
 from flask import Flask
 
 from app.config import Config
 from app.extensions import db, login_manager
-from app.utils import format_datetime, generate_showcase_token
+from app.utils import format_datetime, generate_showcase_token, get_post_size
+
 
 def create_app():
     app = Flask(__name__)
@@ -13,7 +13,8 @@ def create_app():
     login_manager.init_app(app)
 
     app.jinja_env.filters["datetime"] = format_datetime
-
+    app.jinja_env.filters["post_size"] = get_post_size
+    
     with app.app_context():
         from app import models  # noqa: F401
         from app.models import ShowcaseState
