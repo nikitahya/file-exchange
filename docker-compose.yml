@@ -1,0 +1,12 @@
+
+services:
+  fex:
+    build: .
+    container_name: file-exchange
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:8081:8000"
+    volumes:
+      - ./data:/app/data
